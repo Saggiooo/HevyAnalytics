@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import health, smoke
+from app.routers import sync
 
 
 from app.routers import workouts, types, ignored, records, dashboard
@@ -27,4 +28,5 @@ app.include_router(records.router, prefix="/api", tags=["records"])
 app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
 app.include_router(health.router)
 app.include_router(smoke.router)
+app.include_router(sync.router)
 

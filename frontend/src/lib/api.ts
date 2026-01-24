@@ -1,45 +1,23 @@
-const API_BASE = "http://localhost:8000/api"
+const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
 
-export type DashboardSummary = {
-  year: number
-  workouts_count: number
-  training_days: number
-  total_volume_kg: number
-  unique_exercises: number
-  pr_count: number
-  volume_by_month: number[]
-  workouts_by_month: number[]
+async function handleRes(res: Response) {
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(txt || res.statusText);
+  }
+  return res.json();
 }
 
-export type Workout = {
-  id: string
-  title: string
-  date: string | null
-  duration_seconds: number | null
-  ignored: boolean
-  type_id: number | null
+/** Generic GET */
+export function GET<T>(path: string): Promise<T> {
+  return fetch(`${API_BASE}${path}`).then(handleRes);
 }
 
-export async function getDashboardSummary(year: number): Promise<DashboardSummary> {
-  const r = await fetch(`${API_BASE}/dashboard/summary?year=${year}`)
-  if (!r.ok) throw new Error(await r.text())
-  return r.json()
-}
-
-export async function listWorkouts(params: {
-  year?: number
-  includeIgnored?: boolean
-}): Promise<Workout[]> {
-  const q = new URLSearchParams()
-  if (params.year) q.set("year", String(params.year))
-  if (params.includeIgnored) q.set("includeIgnored", "true")
-  const r = await fetch(`${API_BASE}/workouts?${q.toString()}`)
-  if (!r.ok) throw new Error(await r.text())
-  return r.json()
-}
-
-export async function toggleIgnored(workoutId: string) {
-  const r = await fetch(`${API_BASE}/ignored/${workoutId}`, { method: "POST" })
-  if (!r.ok) throw new Error(await r.text())
-  return r.json()
+/** Generic POST */
+export function POST<T>(path: string, body?: any): Promise<T> {
+  return fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: body ? JSON.stringify(body) : undefined,
+  }).then(handleRes);
 }
