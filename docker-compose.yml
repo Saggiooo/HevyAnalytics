@@ -1,0 +1,15 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: hevy_mysql
+    environment:
+      MYSQL_DATABASE: hevy
+      MYSQL_USER: hevy
+      MYSQL_PASSWORD: hevy_pass
+      MYSQL_ROOT_PASSWORD: root_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - hevy_mysql_data:/var/lib/mysql
+volumes:
+  hevy_mysql_data:
