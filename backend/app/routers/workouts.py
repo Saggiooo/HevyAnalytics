@@ -4,8 +4,8 @@ from sqlalchemy import select
 from datetime import datetime
 
 from app.db import get_db
-from app.models import Workout, ExerciseSet  # <-- se il nome è diverso, cambia qui
-from app.schemas import WorkoutOut, WorkoutDetailOut, ExerciseSetOut  # <-- li creiamo sotto
+from app.models import Workout, ExerciseSet
+from app.schemas import WorkoutOut, WorkoutDetailOut, ExerciseSetOut
 from app.sync_service import ensure_synced
 
 router = APIRouter()
@@ -37,6 +37,32 @@ async def list_workouts(
     stmt = stmt.order_by(Workout.date.desc())
     rows = db.execute(stmt).scalars().all()
 
+    workout_ids = [w.id for w in rows]
+    agg_by_workout: dict[str, dict[str, float | int]] = {wid: {"sets": 0, "volume": 0.0, "exercises": 0} for wid in workout_ids}
+
+    if workout_ids:
+        seen_exercises: dict[str, set[str]] = {wid: set() for wid in workout_ids}
+
+        sets_full = db.execute(
+            select(
+                ExerciseSet.workout_id,
+                ExerciseSet.exercise_title,
+                ExerciseSet.weight_kg,
+                ExerciseSet.reps,
+            ).where(ExerciseSet.workout_id.in_(workout_ids))
+        ).all()
+
+        for wid, title, weight, reps in sets_full:
+            agg_by_workout[wid]["sets"] += 1
+            if title:
+                seen_exercises[wid].add(title)
+            w = float(weight or 0)
+            r = int(reps or 0)
+            agg_by_workout[wid]["volume"] += w * r
+
+        for wid in workout_ids:
+            agg_by_workout[wid]["exercises"] = len(seen_exercises[wid])
+
     return [
         WorkoutOut(
             id=w.id,
@@ -45,6 +71,9 @@ async def list_workouts(
             duration_seconds=w.duration_seconds,
             ignored=bool(w.ignored),
             type_id=w.type_id,
+            exercises_count=int(agg_by_workout[w.id]["exercises"]) if w.id in agg_by_workout else 0,
+            sets_count=int(agg_by_workout[w.id]["sets"]) if w.id in agg_by_workout else 0,
+            volume_kg=float(agg_by_workout[w.id]["volume"]) if w.id in agg_by_workout else 0.0,
         )
         for w in rows
     ]

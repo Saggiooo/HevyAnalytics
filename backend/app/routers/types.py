@@ -20,3 +20,17 @@ def assign_type(payload: AssignWorkoutTypeIn, db: Session = Depends(get_db)):
     w.type_id = payload.type_id
     db.commit()
     return {"ok": True}
+
+from sqlalchemy import func
+
+@router.get("/workout-title-types", response_model=list[str])
+def list_title_types(db: Session = Depends(get_db)):
+    # titoli distinti, ordinati
+    rows = db.execute(
+        select(Workout.title)
+        .where(Workout.title.isnot(None))
+        .group_by(Workout.title)
+        .order_by(func.lower(Workout.title).asc())
+    ).all()
+
+    return [r[0] for r in rows if r[0]]

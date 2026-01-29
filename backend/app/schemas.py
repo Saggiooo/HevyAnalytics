@@ -46,6 +46,11 @@ class WorkoutOut(BaseModel):
     ignored: bool
     type_id: int | None = None
 
+    # aggregati calcolati dal DB
+    exercises_count: int = 0
+    sets_count: int = 0
+    volume_kg: float = 0.0
+
     class Config:
         from_attributes = True
 
