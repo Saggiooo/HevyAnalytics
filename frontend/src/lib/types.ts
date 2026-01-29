@@ -8,6 +8,9 @@ export type DashboardSummary = {
   unique_exercises: number;
   volume_by_month: { month: number; volume_kg: number }[];
   top_exercises_by_volume: { title: string; volume_kg: number }[];
+  workouts_count: number;
+  training_days: number;
+  workouts_by_month: number[]; // tipicamente 12 valori
 };
 
 export type WorkoutType = {

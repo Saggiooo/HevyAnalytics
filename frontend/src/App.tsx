@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppShell } from "./layout/AppShell";
 import { Dashboard } from "./pages/Dashboard";
-import { WorkoutsPage } from "./pages/Workouts";
+import WorkoutsPage from "./pages/Workouts";
+
 
 
 function Placeholder({ title }: { title: string }) {
@@ -20,7 +21,7 @@ export default function App() {
       <AppShell>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/workouts" element={<WorkoutsPage />} />
+          <Route path="/workouts" element={<WorkoutsPage title="Allenamenti" />} />
           <Route path="/records" element={<Placeholder title="Record" />} />
           <Route path="/ignored" element={<Placeholder title="Ignored" />} />
           <Route path="/settings" element={<Placeholder title="Settings" />} />

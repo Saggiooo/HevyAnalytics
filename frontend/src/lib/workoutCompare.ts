@@ -10,11 +10,6 @@ export function setVolumeKg(s: WorkoutSet) {
   return w > 0 && r > 0 ? w * r : 0;
 }
 
-export function workoutTotalVolumeKg(w: Workout) {
-  const sets = Array.isArray(w.sets) ? w.sets : [];
-  return sets.reduce((acc, s) => acc + setVolumeKg(s), 0);
-}
-
 
 export function bestSet(sets: WorkoutSet[]) {
   // “best” = max weight, tie-break max reps, tie-break max volume
@@ -89,4 +84,30 @@ export function compareWorkouts(last: Workout | null, prev: Workout | null): Exe
   // ordina: prima chi ha deltaV alto, poi titolo
   rows.sort((a, b) => (b.deltaV - a.deltaV) || a.title.localeCompare(b.title));
   return rows;
+}
+
+
+function getFlatSets(workout: any) {
+  if (Array.isArray(workout?.sets)) return workout.sets;
+
+  const exs = workout?.exercises;
+  if (!Array.isArray(exs)) return [];
+
+  return exs.flatMap((ex: any) =>
+    (ex?.sets ?? []).map((s: any) => ({
+      exercise_title: ex?.title ?? "",
+      exercise_template_id: ex?.exercise_template_id ?? "",
+      set_index: (s?.index ?? 0) + 1,
+      reps: s?.reps ?? 0,
+      weight_kg: s?.weight_kg ?? 0,
+      duration_seconds: s?.duration_seconds ?? 0,
+      distance_meters: s?.distance_meters ?? 0,
+      set_type: s?.type ?? "normal",
+    }))
+  );
+}
+
+export function workoutTotalVolumeKg(workout: any) {
+  const sets = getFlatSets(workout);
+  return sets.reduce((sum: number, s: any) => sum + (Number(s.weight_kg) || 0) * (Number(s.reps) || 0), 0);
 }

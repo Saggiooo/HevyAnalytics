@@ -4,9 +4,13 @@ import { assignWorkoutType, getWorkoutTypes, listWorkouts, toggleIgnore } from "
 import type { Workout, WorkoutType } from "../lib/types";
 import { compareWorkouts, workoutTotalVolumeKg } from "../lib/workoutCompare";
 
+type Props = {
+  title?: string;
+};
+
 function fmtDate(iso?: string | null) {
   if (!iso) return "—";
-  const d = new Date(iso);
+  const d = new Date(String(iso));
   if (isNaN(d.getTime())) return String(iso);
   return d.toLocaleDateString("it-IT", { year: "numeric", month: "short", day: "2-digit" });
 }
@@ -19,27 +23,51 @@ function fmtDur(sec?: number | null) {
   return h > 0 ? `${h}h ${mm}m` : `${mm}m`;
 }
 
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
+}
+
 function Delta({ v, suffix = "" }: { v: number; suffix?: string }) {
   const good = v > 0;
   const bad = v < 0;
   const cls = good ? "text-emerald-300" : bad ? "text-rose-300" : "text-zinc-400";
   const sign = good ? "+" : "";
-  const rounded = Math.round(v * 100) / 100;
-  return <span className={cls}>{sign}{rounded}{suffix}</span>;
+  return (
+    <span className={cls}>
+      {sign}
+      {round2(v)}
+      {suffix}
+    </span>
+  );
 }
 
-function safeVolume(w: Workout | null) {
-  try {
-    if (!w) return 0;
-    // se workoutTotalVolumeKg fosse fragile, qui non rompiamo la pagina
-    const v = workoutTotalVolumeKg(w);
-    return Number.isFinite(v) ? v : 0;
-  } catch {
-    return 0;
-  }
+/**
+ * IMPORTANT: il backend potrebbe non mandare `sets`.
+ * Qui normalizziamo in modo super difensivo.
+ */
+function getSetsSafe(workout: any): any[] {
+  const s =
+    workout?.sets ??
+    workout?.exercise_sets ??
+    workout?.exerciseSets ??
+    workout?.workout_sets ??
+    [];
+  return Array.isArray(s) ? s : [];
 }
 
-export function WorkoutsPage() {
+function uniqueExercisesCount(workout: any) {
+  const sets = getSetsSafe(workout);
+  const titles = sets.map((x) => String(x?.exercise_title ?? x?.exerciseTitle ?? "")).filter(Boolean);
+  return new Set(titles).size;
+}
+
+function totalVolumeSafe(workout: any) {
+  // se workoutCompare si aspetta `sets`, glieli “iniettiamo” senza mutare l’originale
+  const w = workout ? ({ ...workout, sets: getSetsSafe(workout) } as Workout) : null;
+  return w ? workoutTotalVolumeKg(w) : 0;
+}
+
+export function WorkoutsPage({ title = "Allenamenti" }: Props) {
   const qc = useQueryClient();
   const [typeId, setTypeId] = useState<number | "all">("all");
   const [includeIgnored, setIncludeIgnored] = useState(false);
@@ -47,21 +75,23 @@ export function WorkoutsPage() {
   const typesQ = useQuery({
     queryKey: ["workout-types"],
     queryFn: () => getWorkoutTypes(),
-    staleTime: 60_000,
   });
 
-  const workoutsQ = useQuery({
-    queryKey: ["workouts", typeId, includeIgnored],
-    queryFn: () => listWorkouts({ typeId: typeId === "all" ? undefined : typeId, includeIgnored }),
-    staleTime: 10_000,
-  });
+  const workoutsQ = useQuery<Workout[], Error>({
+  queryKey: ["workouts", typeId, includeIgnored],
+  queryFn: async () =>
+    (await listWorkouts({
+      typeId: typeId === "all" ? undefined : typeId,
+      includeIgnored,
+    })) as Workout[],
+  initialData: [],
+});
 
   const assignMut = useMutation({
     mutationFn: ({ workoutId, typeId }: { workoutId: string; typeId: number | null }) =>
       assignWorkoutType(workoutId, typeId),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["workouts"] });
-      await qc.invalidateQueries({ queryKey: ["workout-types"] });
     },
   });
 
@@ -73,57 +103,45 @@ export function WorkoutsPage() {
     },
   });
 
-  // Guard rails: mai più schermo nero
-  if (typesQ.isLoading || workoutsQ.isLoading) {
-    return <div className="card p-6">Loading workouts…</div>;
-  }
-
-  if (typesQ.isError || workoutsQ.isError) {
-    const msg = String((workoutsQ.error as any)?.message || (typesQ.error as any)?.message || "Errore sconosciuto");
-    return (
-      <div className="card p-6">
-        <div className="text-sm text-zinc-400">Allenamenti</div>
-        <div className="text-xl font-semibold mt-1 text-rose-300">Errore nel caricamento</div>
-        <div className="text-zinc-400 mt-2 text-sm break-words">{msg}</div>
-
-        <div className="mt-4 flex gap-2">
-          <button className="btn" onClick={() => qc.invalidateQueries({ queryKey: ["workouts"] })}>
-            Riprova
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   const workouts = workoutsQ.data ?? [];
   const types = typesQ.data ?? [];
 
-  // Ultimo e penultimo nello scope attuale (se filtri per type, arrivano già filtrati)
-  const last = workouts[0] ?? null;
-  const prev = workouts[1] ?? null;
+  // Ultimo e penultimo (già filtrati dal backend se passi typeId)
+  const lastRaw = workouts[0] ?? null;
+  const prevRaw = workouts[1] ?? null;
 
-  // Comparazione: se non ci sono sets, non deve crashare
-  const rows = useMemo(() => {
+  const last = lastRaw ? ({ ...lastRaw, sets: getSetsSafe(lastRaw) } as Workout) : null;
+  const prev = prevRaw ? ({ ...prevRaw, sets: getSetsSafe(prevRaw) } as Workout) : null;
+
+  const [compareError, rows] = useMemo(() => {
+    if (!last || !prev) return [null, []] as const;
     try {
-      return compareWorkouts(last, prev);
-    } catch {
-      return [];
+      return [null, compareWorkouts(last, prev)] as const;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return [msg, []] as const;
     }
   }, [last, prev]);
 
-  const lastVol = safeVolume(last);
-  const prevVol = safeVolume(prev);
+  const lastVol = totalVolumeSafe(last);
+  const prevVol = totalVolumeSafe(prev);
 
-  const lastHasSets = Array.isArray((last as any)?.sets) && (last as any).sets.length > 0;
-  const prevHasSets = Array.isArray((prev as any)?.sets) && (prev as any).sets.length > 0;
-  const canCompareExercises = Boolean(last && prev && lastHasSets && prevHasSets);
+  if (workoutsQ.isLoading || typesQ.isLoading) {
+    return <div className="card p-6">Loading workouts…</div>;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <div className="text-sm text-zinc-400">Allenamenti</div>
+          <div className="text-sm text-zinc-400">{title}</div>
           <h1 className="text-2xl font-semibold tracking-tight">Confronto & storico</h1>
+
+          {workoutsQ.isError && (
+            <div className="text-sm text-rose-300 mt-2">
+              Errore API: {(workoutsQ.error as Error).message}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -134,7 +152,9 @@ export function WorkoutsPage() {
           >
             <option value="all">Tutti i tipi</option>
             {types.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
             ))}
           </select>
 
@@ -156,11 +176,8 @@ export function WorkoutsPage() {
               <div className="text-sm text-zinc-400">Ultimo allenamento</div>
               <div className="font-semibold truncate">{last?.title ?? "—"}</div>
               <div className="text-xs text-zinc-500 mt-1">
-                {fmtDate((last as any)?.date ?? (last as any)?.start_time ?? null)}
-                {" • "}
-                durata {fmtDur((last as any)?.duration_seconds ?? null)}
-                {" • "}
-                volume {Math.round(lastVol).toLocaleString()} kg
+                {last ? fmtDate(last.date) : "—"} • durata {fmtDur(last?.duration_seconds)} • volume{" "}
+                {Math.round(lastVol).toLocaleString()} kg
               </div>
             </div>
 
@@ -171,16 +188,14 @@ export function WorkoutsPage() {
                 disabled={ignoreMut.isPending}
                 title="Ignora / ripristina"
               >
-                {(last as any).ignored ? "Ripristina" : "Ignora"}
+                {last.ignored ? "Ripristina" : "Ignora"}
               </button>
             )}
           </div>
 
           <div className="mt-4 flex gap-2 flex-wrap">
-            <span className="pill">Sets: {lastHasSets ? (last as any).sets.length : "—"}</span>
-            <span className="pill">
-              Esercizi: {lastHasSets ? new Set(((last as any).sets ?? []).map((s: any) => s.exercise_title)).size : "—"}
-            </span>
+            <span className="pill">Sets: {getSetsSafe(last).length || "—"}</span>
+            <span className="pill">Esercizi: {uniqueExercisesCount(last) || "—"}</span>
           </div>
 
           {typeId === "all" && last && (
@@ -197,20 +212,17 @@ export function WorkoutsPage() {
           <div className="text-sm text-zinc-400">Precedente (stesso tipo)</div>
           <div className="font-semibold truncate">{prev?.title ?? "—"}</div>
           <div className="text-xs text-zinc-500 mt-1">
-            {fmtDate((prev as any)?.date ?? (prev as any)?.start_time ?? null)}
-            {" • "}
-            durata {fmtDur((prev as any)?.duration_seconds ?? null)}
-            {" • "}
-            volume {Math.round(prevVol).toLocaleString()} kg
+            {prev ? fmtDate(prev.date) : "—"} • durata {fmtDur(prev?.duration_seconds)} • volume{" "}
+            {Math.round(prevVol).toLocaleString()} kg
           </div>
 
-          <div className="mt-4 flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between gap-3">
             <div className="text-sm">
               Delta volume: <Delta v={lastVol - prevVol} suffix=" kg" />
             </div>
             {prev && (
-              <button className="btn" onClick={() => ignoreMut.mutate(prev.id)} disabled={ignoreMut.isPending}>
-                {(prev as any).ignored ? "Ripristina" : "Ignora"}
+              <button className="btn shrink-0" onClick={() => ignoreMut.mutate(prev.id)} disabled={ignoreMut.isPending}>
+                {prev.ignored ? "Ripristina" : "Ignora"}
               </button>
             )}
           </div>
@@ -228,7 +240,7 @@ export function WorkoutsPage() {
 
       {/* Tabella confronto */}
       <section className="card p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-sm text-zinc-400">Confronto esercizi</div>
             <div className="font-semibold">Best set + volume per esercizio</div>
@@ -240,12 +252,12 @@ export function WorkoutsPage() {
           <div className="mt-6 text-zinc-500">
             Seleziona un tipo allenamento (A/B/…) con almeno 2 workout per vedere il confronto.
           </div>
-        ) : !canCompareExercises ? (
-          <div className="mt-6 text-zinc-500">
-            Per confrontare gli esercizi mi servono i <span className="text-zinc-300">sets</span> nei workout.
-            Al momento l’API interna sembra tornare workout “light”.
-            <div className="mt-2 text-xs text-zinc-500">
-              Soluzione: aggiungere endpoint dettaglio workout (es. <span className="text-zinc-300">GET /api/workouts/{`{id}`}</span>) oppure includere sets per last/prev.
+        ) : compareError ? (
+          <div className="mt-6 text-rose-300 text-sm">
+            Crash evitato 😄: compareWorkouts ha lanciato un errore:
+            <div className="mt-2 text-zinc-300">{compareError}</div>
+            <div className="mt-2 text-zinc-500">
+              Tipicamente succede se il backend non sta includendo i set nel payload dei workout.
             </div>
           </div>
         ) : (
@@ -271,15 +283,17 @@ export function WorkoutsPage() {
                         {Math.round(r.prev?.volume ?? 0).toLocaleString()}
                       </div>
                     </td>
+                    <td className="py-3 px-3 text-right">{r.last ? `${r.last.bestW} kg × ${r.last.bestR}` : "—"}</td>
+                    <td className="py-3 px-3 text-right">{r.prev ? `${r.prev.bestW} kg × ${r.prev.bestR}` : "—"}</td>
                     <td className="py-3 px-3 text-right">
-                      {r.last ? `${r.last.bestW} kg × ${r.last.bestR}` : "—"}
+                      <Delta v={r.deltaW} />
                     </td>
                     <td className="py-3 px-3 text-right">
-                      {r.prev ? `${r.prev.bestW} kg × ${r.prev.bestR}` : "—"}
+                      <Delta v={r.deltaR} />
                     </td>
-                    <td className="py-3 px-3 text-right"><Delta v={r.deltaW} /></td>
-                    <td className="py-3 px-3 text-right"><Delta v={r.deltaR} /></td>
-                    <td className="py-3 pl-3 text-right"><Delta v={r.deltaV} suffix=" kg" /></td>
+                    <td className="py-3 pl-3 text-right">
+                      <Delta v={r.deltaV} suffix=" kg" />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -290,41 +304,39 @@ export function WorkoutsPage() {
 
       {/* Lista workout filtrati */}
       <section className="card p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-sm text-zinc-400">Storico</div>
             <div className="font-semibold">Workouts ({workouts.length})</div>
           </div>
+          {workoutsQ.isLoading && <span className="pill">loading...</span>}
         </div>
 
         <div className="mt-4 divide-y divide-white/10">
           {workouts.map((w) => {
-            const vol = safeVolume(w);
+            const setsCount = getSetsSafe(w).length;
             return (
               <div key={w.id} className="py-3 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="font-medium truncate">
-                    {w.title} {(w as any).ignored && <span className="pill ml-2">ignored</span>}
+                    {w.title} {w.ignored && <span className="pill ml-2">ignored</span>}
                   </div>
                   <div className="text-xs text-zinc-500">
-                    {fmtDate((w as any)?.date ?? (w as any)?.start_time ?? null)}
-                    {" • "}
-                    durata {fmtDur((w as any)?.duration_seconds ?? null)}
-                    {" • "}
-                    volume {Math.round(vol).toLocaleString()} kg
+                    {fmtDate(w.date)} • durata {fmtDur(w.duration_seconds)} • sets {setsCount} • volume{" "}
+                    {Math.round(totalVolumeSafe(w)).toLocaleString()} kg
                   </div>
                 </div>
 
                 <div className="flex gap-2 shrink-0">
                   <button className="btn" onClick={() => ignoreMut.mutate(w.id)} disabled={ignoreMut.isPending}>
-                    {(w as any).ignored ? "Ripristina" : "Ignora"}
+                    {w.ignored ? "Ripristina" : "Ignora"}
                   </button>
                 </div>
               </div>
             );
           })}
 
-          {workouts.length === 0 && (
+          {workouts.length === 0 && !workoutsQ.isLoading && (
             <div className="py-6 text-zinc-500">Nessun workout per questo filtro.</div>
           )}
         </div>
@@ -350,16 +362,20 @@ function AssignTypeBlock({
       <div className="flex gap-2">
         <select
           className="btn"
-          value={(workout as any).type_id ?? ""}
+          value={workout.type_id ?? ""}
           onChange={(e) => onAssign(e.target.value ? Number(e.target.value) : null)}
           disabled={busy}
         >
           <option value="">Nessuno</option>
           {types.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
           ))}
         </select>
       </div>
     </div>
   );
 }
+
+export default WorkoutsPage;

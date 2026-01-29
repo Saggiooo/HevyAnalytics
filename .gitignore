@@ -1,6 +1,100 @@
 .env.example
 .env
-/backend/node_modules
-/frontend/node_modules
-/backend/.env
+############################################
+# GENERAL
+############################################
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
 
+############################################
+# NODE / FRONTEND (Vite, React, Electron)
+############################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env
+frontend/.env.*
+
+# Electron
+desktop/node_modules/
+desktop/dist/
+desktop/out/
+desktop/release/
+desktop/build/
+
+# Electron builder output
+*.dmg
+*.blockmap
+*.exe
+*.AppImage
+*.zip
+
+############################################
+# PYTHON / BACKEND (FastAPI, SQLAlchemy)
+############################################
+backend/.venv/
+backend/venv/
+backend/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/*.pyd
+backend/.pytest_cache/
+backend/.mypy_cache/
+
+# Python env
+.env
+.env.*
+!.env.example
+
+############################################
+# PYINSTALLER
+############################################
+build/
+dist/
+*.spec
+
+############################################
+# DATABASE / RUNTIME FILES
+############################################
+*.sqlite
+*.sqlite3
+*.db
+
+############################################
+# IDEs
+############################################
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/settings.json
+
+.idea/
+*.iml
+
+############################################
+# OS / SYSTEM
+############################################
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+############################################
+# MISC
+############################################
+coverage/
+reports/
+logs/

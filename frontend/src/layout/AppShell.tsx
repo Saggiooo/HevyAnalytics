@@ -1,4 +1,6 @@
-import { ReactNode, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
+
 import { Sidebar } from "../ui/Sidebar";
 import { Topbar } from "../ui/Topbar";
 

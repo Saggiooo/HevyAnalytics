@@ -30,3 +30,7 @@ app.include_router(health.router)
 app.include_router(smoke.router)
 app.include_router(sync.router)
 
+@app.get("/health")
+def health():
+    return {"ok": True}
+
