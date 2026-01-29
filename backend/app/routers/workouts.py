@@ -113,7 +113,7 @@ async def get_workout_detail(
                 set_index=s.set_index,
                 reps=s.reps,
                 weight_kg=float(s.weight_kg or 0),
-                distance_meters=float(s.distance_meters or 0),
+                distance_meters=float(s.distance or 0),
                 duration_seconds=int(s.duration_seconds or 0),
                 set_type=s.set_type,
             )

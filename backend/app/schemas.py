@@ -6,7 +6,7 @@ class DashboardTopExerciseRow(BaseModel):
     exercise_title: str
     volume_kg: float
 
-
+#non serve più DashboardMonthRow(BaseModel):
 class DashboardMonthRow(BaseModel):
     month: int  # 1..12
     workout_count: int
@@ -15,15 +15,21 @@ class DashboardMonthRow(BaseModel):
 
 class DashboardSummaryOut(BaseModel):
     year: int
-    workouts_total: int
-    days_trained: int
-    unique_exercises: int
-    total_volume_kg: float
-    pr_count: int
 
-    workouts_by_month: list[DashboardMonthRow] = []
-    volume_by_month: list[DashboardMonthRow] = []  # se nel router li separi, ok; se no puoi lasciarlo vuoto
+    # Top cards
+    workouts_count: int
+    training_days: int
+    total_volume_kg: float
+    unique_exercises: int
+    pr_count: int = 0
+
+    # Charts (Jan..Dec)
+    workouts_by_month: list[int] = []
+    volume_by_month: list[float] = []
     top_exercises_by_volume: list[DashboardTopExerciseRow] = []
+    class Config:
+        from_attributes = True
+    
 
 class RecordRow(BaseModel):
     exercise_title: str

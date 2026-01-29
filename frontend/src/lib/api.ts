@@ -63,7 +63,7 @@ export function assignWorkoutType(workoutId: string, typeId: number | null) {
 }
 
 export function toggleIgnore(workoutId: string) {
-  return POST<{ ok: boolean }>(`/api/ignored/${workoutId}`);
+  return POST<{ ok: boolean }>(`/ignored/${workoutId}`);
 }
 
 export async function getWorkout(workoutId: string): Promise<Workout> {
