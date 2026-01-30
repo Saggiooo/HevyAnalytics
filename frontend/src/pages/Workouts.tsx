@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listWorkouts, toggleIgnore } from "../lib/api";
 import type { Workout } from "../lib/types";
 import { compareWorkouts, workoutTotalVolumeKg } from "../lib/workoutCompare";
+import { Link } from "react-router-dom";
 
 type Props = {
   title?: string;
@@ -451,23 +452,36 @@ export function WorkoutsPage({ title = "Allenamenti" }: Props) {
 
         <div className="mt-4 divide-y divide-white/10">
           {filtered.map((w: Workout) => (
-            <div key={w.id} className="py-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-medium truncate">
-                  {w.title} {w.ignored && <span className="pill ml-2">ignored</span>}
-                </div>
-                <div className="text-xs text-zinc-500">
-                  {fmtDate(w.date)} • durata {fmtDur(w.duration_seconds)}
-                </div>
-              </div>
+  <Link
+    key={w.id}
+    to={`/workouts/${w.id}`}
+    className="block py-3 hover:bg-white/5 rounded-xl -mx-2 px-2"
+  >
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <div className="font-medium truncate">
+          {w.title} {w.ignored && <span className="pill ml-2">ignored</span>}
+        </div>
+        <div className="text-xs text-zinc-500">
+          {fmtDate(w.date)} • durata {fmtDur(w.duration_seconds)}
+        </div>
+      </div>
 
-              <div className="flex gap-2 shrink-0">
-                <button className="btn" onClick={() => ignoreMut.mutate(w.id)} disabled={ignoreMut.isPending}>
-                  {w.ignored ? "Ripristina" : "Ignora"}
-                </button>
-              </div>
-            </div>
-          ))}
+      <div className="flex gap-2 shrink-0">
+        <button
+          className="btn"
+          onClick={(e) => {
+            e.preventDefault(); // IMPORTANT: evita di navigare quando clicchi ignora
+            ignoreMut.mutate(w.id);
+          }}
+          disabled={ignoreMut.isPending}
+        >
+          {w.ignored ? "Ripristina" : "Ignora"}
+        </button>
+      </div>
+    </div>
+  </Link>
+))}
 
           {filtered.length === 0 && !workoutsQ.isLoading && (
             <div className="py-6 text-zinc-500">Nessun workout per questo filtro.</div>

@@ -32,7 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <footer className="px-4 sm:px-6 lg:px-8 pb-8">
               <div className="mx-auto max-w-6xl text-xs text-zinc-500">
-                Hevy Analytics • local-first • FastAPI + React
+                Hevy Analytics • svilupato da Simone Saggese • @saggio__
               </div>
             </footer>
           </div>

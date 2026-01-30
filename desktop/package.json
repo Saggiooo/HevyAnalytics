@@ -15,7 +15,8 @@
 
     "dev:backend": "node scripts/start-backend.js",
     "dev:frontend": "cd ../frontend && npm run dev -- --host localhost --port 5173",
-    "dev:electron": "concurrently -k -n BACKEND,FRONTEND,ELECTRON -c auto \"npm run dev:backend\" \"npm run dev:frontend\" \"wait-on --httpTimeout 2000 --timeout 60000 http-get://127.0.0.1:8000/health http://localhost:5173 && cross-env ELECTRON_START_URL=http://localhost:5173 electron .\""
+    "dev:electron": "concurrently -k -n BACKEND,FRONTEND,ELECTRON -c auto \"npm run dev:backend\" \"npm run dev:frontend\" \"wait-on --httpTimeout 2000 --timeout 60000 http-get://127.0.0.1:8000/health http://localhost:5173 && cross-env ELECTRON_START_URL=http://localhost:5173 electron .\"",
+    "dev:electron:fe": "concurrently -k -n FRONTEND,ELECTRON -c auto \"npm run dev:frontend\" \"wait-on http://localhost:5173 && cross-env ELECTRON_START_URL=http://localhost:5173 electron .\""
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

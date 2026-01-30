@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppShell } from "./layout/AppShell";
 import { Dashboard } from "./pages/Dashboard";
 import WorkoutsPage from "./pages/Workouts";
+import { WorkoutDetailPage } from "./pages/WorkoutDetailPage";
+import { IgnoredPage } from "./pages/IgnoredPage";
+import { RecordPage } from "./pages/RecordPage";
 
 
 
@@ -22,9 +25,10 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/workouts" element={<WorkoutsPage title="Allenamenti" />} />
-          <Route path="/records" element={<Placeholder title="Record" />} />
-          <Route path="/ignored" element={<Placeholder title="Ignored" />} />
+          <Route path="/records" element={<RecordPage/>} />
+          <Route path="/ignored" element={<IgnoredPage/>} />
           <Route path="/settings" element={<Placeholder title="Settings" />} />
+          <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
         </Routes>
       </AppShell>
     </BrowserRouter>
