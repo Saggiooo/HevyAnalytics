@@ -5,10 +5,11 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.config import HEVY_BASE_URL, DEFAULT_PAGE_SIZE, SYNC_COOLDOWN_SECONDS
 from app.hevy_client import HevyClient
-from app.models import Workout, ExerciseSet, SyncState
+from app.models import Workout, ExerciseSet, SyncState, Exercise
 from app.normalizer import pick, iso_to_dt, workout_duration_seconds
 
 
@@ -42,6 +43,8 @@ async def ensure_synced(db: Session) -> None:
 async def full_sync(db: Session, client: HevyClient) -> None:
     page = 1
     page_count = 1
+    inserted_sets = 0
+    seen_sets = 0
 
     while page <= page_count:
         data = await client.get("/v1/workouts", {"page": page, "pageSize": DEFAULT_PAGE_SIZE})
@@ -79,6 +82,18 @@ async def full_sync(db: Session, client: HevyClient) -> None:
                 ex_title = pick(ex, ["title", "name", "exercise_title"]) or ""
                 template_id = pick(ex, ["exercise_template_id", "exerciseTemplateId", "template_id", "exercise_id"])
                 template_id = str(template_id) if template_id else None
+                # upsert Exercise (catalogo)
+                if template_id or ex_title:
+                    q = None
+                    if template_id:
+                        q = db.query(Exercise).filter(Exercise.exercise_template_id == template_id).first()
+                    if not q:
+                        q = Exercise(exercise_title=ex_title, exercise_template_id=template_id)
+                        db.add(q)
+                    else:
+                        # aggiorna titolo se cambia
+                        if ex_title and q.exercise_title != ex_title:
+                            q.exercise_title = ex_title
 
                 sets = pick(ex, ["sets", "exercise_sets"]) or []
                 for idx, s in enumerate(sets):
@@ -102,13 +117,18 @@ async def full_sync(db: Session, client: HevyClient) -> None:
                     )
 
                     # Inserimento semplice: se duplica (uq_set_key) ignora
+                    seen_sets += 1
                     try:
-                        db.add(row)
-                        db.flush()
-                    except Exception:
-                        db.rollback()
+                        with db.begin_nested():  # SAVEPOINT: rollbacka solo questo inserimento
+                            db.add(row)
+                            db.flush()
+                            inserted_sets += 1
+                    except IntegrityError:
+                        # duplicato: ignoralo e vai avanti senza sputtanare la transazione
+                        pass
 
         db.commit()
+        print(f"[SYNC] sets: inserted={inserted_sets} seen={seen_sets}")
         page += 1
 
 

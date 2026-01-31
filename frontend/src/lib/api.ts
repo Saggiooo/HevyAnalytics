@@ -72,4 +72,45 @@ export async function getWorkout(workoutId: string): Promise<Workout> {
   return r.json();
 }
 
+import type { ExerciseCatalogRow, ExerciseUpdateIn } from "./types";
 
+
+export async function listExercises(): Promise<ExerciseCatalogRow[]> {
+  const res = await fetch(`${API_BASE}/exercises`);
+  if (!res.ok) throw new Error(`GET /exercises failed (${res.status})`);
+  return (await res.json()) as ExerciseCatalogRow[];
+}
+
+export async function updateExercise(exerciseId: number, payload: ExerciseUpdateIn): Promise<ExerciseCatalogRow> {
+  const res = await fetch(`${API_BASE}/exercises/${exerciseId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`PATCH /exercises/${exerciseId} failed (${res.status})`);
+  return (await res.json()) as ExerciseCatalogRow;
+}
+
+import type { AnalysisSummary } from "./types";
+
+
+export async function getAnalysisSummary(params: { from: string; to: string }): Promise<AnalysisSummary> {
+  const qs = new URLSearchParams({ from: params.from, to: params.to });
+  const res = await fetch(`${API_BASE}/analysis/summary?${qs.toString()}`);
+  if (!res.ok) throw new Error(`GET /analysis/summary failed (${res.status})`);
+  return (await res.json()) as AnalysisSummary;
+}
+
+
+export async function getExerciseProgress(params: {
+  templateId: string;
+  from: string;
+  to: string;
+}) {
+  const { templateId, from, to } = params;
+  const res = await fetch(
+    `${API_BASE}/exercises/${encodeURIComponent(templateId)}/progress?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+  );
+  if (!res.ok) throw new Error(`GET /exercises/${templateId}/progress failed (${res.status})`);
+  return res.json();
+}

@@ -5,6 +5,10 @@ import WorkoutsPage from "./pages/Workouts";
 import { WorkoutDetailPage } from "./pages/WorkoutDetailPage";
 import { IgnoredPage } from "./pages/IgnoredPage";
 import { RecordPage } from "./pages/RecordPage";
+import ExercisesPage from "./pages/ExercisesPage";
+import AnalysisPage from "./pages/AnalysisPage";
+import ExerciseDetailPage from "./pages/ExerciseDetailPage";
+
 
 
 
@@ -29,6 +33,9 @@ export default function App() {
           <Route path="/ignored" element={<IgnoredPage/>} />
           <Route path="/settings" element={<Placeholder title="Settings" />} />
           <Route path="/workouts/:id" element={<WorkoutDetailPage />} />
+          <Route path="/exercises" element={<ExercisesPage />} />
+          <Route path="/analysis" element={<AnalysisPage />} />
+          <Route path="/exercises/:templateId" element={<ExerciseDetailPage />} />
         </Routes>
       </AppShell>
     </BrowserRouter>

@@ -2,9 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import health, smoke
 from app.routers import sync
+from app.routers import exercises
+from app.routers.exercise_detail import router as exercise_detail_router
 
 
-from app.routers import workouts, ignored, records, dashboard
+
+
+from app.routers import workouts, ignored, records, dashboard, analysis
 from app.db import init_db
 
 app = FastAPI(title="Hevy Analytics API", version="0.1")
@@ -28,6 +32,9 @@ app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
 app.include_router(health.router)
 app.include_router(smoke.router)
 app.include_router(sync.router)
+app.include_router(exercises.router)
+app.include_router(analysis.router)
+app.include_router(exercise_detail_router)
 
 @app.get("/health")
 def health():

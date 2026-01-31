@@ -402,7 +402,7 @@ export function WorkoutsPage({ title = "Allenamenti" }: Props) {
                  <tr
   key={r.key}
   className={`border-b border-white/5 hover:bg-white/5 ${
-    r.deltaW > 0 || r.deltaR > 0 ? "bg-emerald-500/5" : ""
+    r.deltaW > 0 ? "bg-emerald-500/5" : ""
   }`}
 >
                     <td className="py-3 pr-3">

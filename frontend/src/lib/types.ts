@@ -37,3 +37,51 @@ export type Workout = {
   // se il backend li include:
   sets?: WorkoutSet[];
 };
+
+
+export type ExerciseCatalogRow = {
+  id: number;
+  exercise_title: string;
+  exercise_template_id?: string | null;
+  muscles: string[];
+  equipment: string[];
+};
+
+export type ExerciseUpdateIn = {
+  muscles?: string[] | null;
+  equipment?: string[] | null;
+};
+
+export type AnalysisSummary = {
+  from: string;
+  to: string;
+  previous_from: string;
+  previous_to: string;
+  muscle_counts: Record<string, number>;
+  radar: {
+    attuale: Record<string, number>;
+    precedente: Record<string, number>;
+  };
+  meta?: {
+    workouts_attuale?: number;
+    workouts_precedente?: number;
+  };
+};
+
+export type ExerciseProgress = {
+  exercise_template_id: string;
+  exercise_title: string;
+  from: string;
+  to: string;
+  summary: {
+    total_sets: number;
+    workouts_count: number;
+  };
+  series: Array<{
+    date: string | null;
+    workout_id: string;
+    weight_kg: number | null;
+    reps: number | null;
+    set_index: number | null;
+  }>;
+};

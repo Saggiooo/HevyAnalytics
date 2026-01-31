@@ -1,8 +1,51 @@
 from sqlalchemy import (
-    Column, String, Integer, DateTime, Boolean, ForeignKey, Text, Float, UniqueConstraint
+    Column, String, Integer, DateTime, Boolean, ForeignKey, Text, Float, UniqueConstraint, BigInteger, SmallInteger, Table
 )
 from sqlalchemy.orm import relationship
 from app.db import Base
+
+# --- association tables ---
+exercise_muscles = Table(
+    "exercise_muscles",
+    Base.metadata,
+    Column("exercise_id", BigInteger, ForeignKey("exercises.id", ondelete="CASCADE"), primary_key=True),
+    Column("muscle_id", SmallInteger, ForeignKey("muscles.id", ondelete="CASCADE"), primary_key=True),
+)
+
+exercise_equipment = Table(
+    "exercise_equipment",
+    Base.metadata,
+    Column("exercise_id", BigInteger, ForeignKey("exercises.id", ondelete="CASCADE"), primary_key=True),
+    Column("equipment_id", SmallInteger, ForeignKey("equipment.id", ondelete="CASCADE"), primary_key=True),
+)
+
+class Exercise(Base):
+    __tablename__ = "exercises"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    exercise_title = Column(String(255), nullable=False)
+    exercise_template_id = Column(String(64), nullable=True, unique=True, index=True)
+
+    muscles = relationship("Muscle", secondary=exercise_muscles, back_populates="exercises", lazy="selectin")
+    equipment = relationship("Equipment", secondary=exercise_equipment, back_populates="exercises", lazy="selectin")
+
+
+class Muscle(Base):
+    __tablename__ = "muscles"
+
+    id = Column(SmallInteger, primary_key=True, autoincrement=True)
+    name = Column(String(64), nullable=False, unique=True)
+
+    exercises = relationship("Exercise", secondary=exercise_muscles, back_populates="muscles", lazy="selectin")
+
+
+class Equipment(Base):
+    __tablename__ = "equipment"
+
+    id = Column(SmallInteger, primary_key=True, autoincrement=True)
+    name = Column(String(64), nullable=False, unique=True)
+
+    exercises = relationship("Exercise", secondary=exercise_equipment, back_populates="equipment", lazy="selectin")
 
 class WorkoutType(Base):
     __tablename__ = "workout_types"

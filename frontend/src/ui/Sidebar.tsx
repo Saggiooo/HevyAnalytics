@@ -10,6 +10,8 @@ const nav = [
   { to: "/workouts", label: "Allenamenti", icon: "🏋️" },
   { to: "/records", label: "Record", icon: "🏆" },
   { to: "/ignored", label: "Ignored", icon: "🚫" },
+  { to: "/exercises", label: "Esercizi", icon: "💪" }, 
+  { to: "/analysis", label: "Analysis", icon: "🔍" },
   { to: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
@@ -38,7 +40,7 @@ export function Sidebar({ collapsed, onToggle }: Props) {
         </div>
 
         <button className="btn" onClick={onToggle} aria-label="Toggle sidebar">
-          {collapsed ? "➡️" : "⬅️"}
+          {collapsed ? "▶" : "◀"}
         </button>
       </div>
 
@@ -60,16 +62,6 @@ export function Sidebar({ collapsed, onToggle }: Props) {
           </NavLink>
         ))}
       </nav>
-
-      <div className="absolute bottom-0 left-0 right-0 p-4">
-        <div className="card p-3">
-          <div className="text-xs text-zinc-400">Sync</div>
-          <div className="text-sm">Pronto a pompare dati</div>
-          <div className="mt-2 flex gap-2">
-            <button className="btn btn-primary w-full">Sync now</button>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

@@ -1,6 +1,20 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import List, Optional
 
+class ExerciseOut(BaseModel):
+    id: int
+    exercise_title: str
+    exercise_template_id: Optional[str] = None
+    muscles: List[str] = []
+    equipment: List[str] = []
+
+    class Config:
+        from_attributes = True
+
+class ExerciseUpdateIn(BaseModel):
+    muscles: Optional[List[str]] = None
+    equipment: Optional[List[str]] = None
 
 class DashboardTopExerciseRow(BaseModel):
     exercise_title: str
